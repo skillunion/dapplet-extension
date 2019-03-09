@@ -1,4 +1,25 @@
-var plugin = {
+import WalletConnectQRCodeModal from "@walletconnect/qrcode-modal";
+
+var port = chrome.extension.connect({
+    name: "Dapplet Extension Bus"
+});
+
+port.onMessage.addListener(function (msg) {
+    console.log("message recieved" + msg);
+
+    if (msg.type === 'bg_inpage_openModal') {
+        WalletConnectQRCodeModal.open(msg.uri, () => {
+            console.log("QR Code Modal closed");
+        });
+    }
+
+    if (msg.type === 'bg_inpage_closeModal') {
+        WalletConnectQRCodeModal.close();
+    }
+    
+});
+
+const plugin = {
     _querySelector: 'li.stream-item div.js-actions',
     _uniqueClass: '.metamask-widget-tweet',
     _buttonHtmlString: `<div class="metamask-widget-tweet ProfileTweet-action">
@@ -45,19 +66,26 @@ var plugin = {
 
     _onWidgetButtonClick: async function (event) {
         var tweetNode = event.target.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode;
-        var tweetId = tweetNode.getAttribute('data-tweet-id');
-        var tweetText = tweetNode.querySelector('div.js-tweet-text-container').innerText;
 
-        const twitterResponse = await fetch(`https://publish.twitter.com/oembed?url=https://twitter.com/0/status/${tweetId}`)
-        const twitterParsed = await twitterResponse.json()
+        var metadata = {
+            id: tweetNode.getAttribute('data-tweet-id'),
+            text: tweetNode.querySelector('div.js-tweet-text-container').innerText,
+            authorFullname: tweetNode.querySelector('strong.fullname').innerText,
+            authorUsername: tweetNode.querySelector('span.username').innerText,
+            authorImg: tweetNode.querySelector('img.avatar').getAttribute('src')
+        };
 
-        this._pushTransactionCallback(twitterParsed);
+        console.log('!!!! metadata', metadata);
+
+        var result = await this._loadDappletCallback('1', metadata);
+
+        console.log('!!!! result', result);
     },
 
-    init: function (doc, pushTransactionCallback) {
+    init: function (doc, loadDappletCallback) {
         var me = this;
 
-        me._pushTransactionCallback = pushTransactionCallback;
+        me._loadDappletCallback = loadDappletCallback;
         var MutationObserver = window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver;
         me.observer = new MutationObserver(function (mutationsList) {
             me._onMutate.call(me, mutationsList);
@@ -74,6 +102,14 @@ var plugin = {
 }
 
 
-plugin.init(document, function() {
-    console.log('push transaction called', arguments);
+plugin.init(document, function (dappletId, metadata) {
+
+    // return result;
+    port.postMessage({
+        type: 'inpage_bg_loadDapplet',
+        dappletId: dappletId,
+        metadata: metadata
+    });
+
+    return true;
 });
