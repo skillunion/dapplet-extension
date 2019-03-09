@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@walletconnect/browser": "^1.0.0-beta.6",
-    "@walletconnect/qrcode-modal": "^1.0.0-beta.6"
+    "@walletconnect/qrcode-modal": "^1.0.0-beta.6",
+    "chrome-extension-message-wrapper": "^1.0.3"
   }
 }
