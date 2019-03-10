@@ -6,13 +6,23 @@ import { setupMessageListener } from "chrome-extension-message-wrapper";
 
 const bridge = "https://bridge.walletconnect.org";
 
-const walletConnector = new WalletConnect({ bridge });
+var walletConnector = new WalletConnect({ bridge });
+
+walletConnector.on("disconnect", (error, payload) => {
+    if (error) {
+        throw error;
+    }
+
+    localStorage.clear();
+    console.log('wallet disconnected, localstorage cleaned'); // tslint:disable-line
+});
 
 const checkConnection = () => {
     return walletConnector.connected;
 }
 
 const generateUri = async () => {
+    await walletConnector.killSession();
     await walletConnector.createSession();
     const uri = walletConnector.uri;
     return uri;
